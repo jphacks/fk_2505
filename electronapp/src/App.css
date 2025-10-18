@@ -1,24 +1,87 @@
 .App {
+  text-align: center;
   width: 100vw;
   height: 100vh;
-  background: transparent;
-  position: relative;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
+  background: transparent; /* 透過を有効にする */
+  position: relative;
 }
 
-.image-container {
+/* 海の波エフェクト（薄い透明な水色） */
+.App::before {
+  content: '';
   position: absolute;
-  width: 200px;
-  height: 200px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.App-image {
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  border-radius: 50%;
+  background: 
+    linear-gradient(180deg, 
+      rgba(135, 206, 235, 0.3) 0%,     /* 薄い空色 */
+      rgba(135, 206, 235, 0.2) 30%,    /* 薄い空色 */
+      rgba(70, 130, 180, 0.4) 70%,     /* 薄いスチールブルー */
+      rgba(30, 144, 255, 0.5) 100%    /* 薄いドジャーブルー */
+    ),
+    radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+  animation: wave 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes wave {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 画像サイズ制御 */
+.App-image {
+  width: 200px;
+  height: 200px;
+  object-fit: contain;
+  cursor: pointer;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
   transition: transform 0.3s ease;
 }
 
@@ -26,111 +89,14 @@
   transform: scale(1.05);
 }
 
-.overlay {
-  position: absolute;
-  top: -100px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 15px;
-  padding: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 182, 193, 0.3);
-  z-index: 1000;
-  min-width: 300px;
-}
-
-.input-container {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.input-container input {
-  padding: 10px;
-  border: 2px solid #ffb6c1;
-  border-radius: 8px;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.3s ease;
-}
-
-.input-container input:focus {
-  border-color: #ff69b4;
-}
-
-.input-container button {
-  padding: 10px 20px;
-  background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
-  border: none;
-  border-radius: 8px;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-  transition: transform 0.2s ease;
-}
-
-.input-container button:hover:not(:disabled) {
-  transform: translateY(-2px);
-}
-
-.input-container button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.response-container {
-  text-align: center;
-}
-
-.response-text {
-  margin-bottom: 15px;
-  padding: 15px;
-  background: rgba(255, 182, 193, 0.1);
-  border-radius: 10px;
-  border-left: 4px solid #ff69b4;
-}
-
-.response-text p {
-  margin: 0;
-  color: #333;
-  line-height: 1.5;
-}
-
-.response-container button {
-  padding: 8px 16px;
-  background: #ff69b4;
-  color: white;
-  border: none;
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: background-color 0.3s ease;
-}
-
-.response-container button:hover {
-  background: #ff1493;
-}
-
-.black-block {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 20px;
-  background: #000;
-  z-index: -1;
-}
-
 /* ウィンドウ操作ボタン */
 .window-controls {
   position: fixed;
   top: 10px;
   right: 10px;
+  z-index: 1000;
   display: flex;
   gap: 5px;
-  z-index: 1000;
 }
 
 .control-btn {
@@ -139,50 +105,180 @@
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: bold;
-  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .minimize-btn {
-  background: #ffbd2e;
-  color: #8a6d00;
-}
-
-.minimize-btn:hover {
-  background: #ffd700;
-  transform: scale(1.1);
+  background-color: #ffc107;
+  color: #000;
 }
 
 .maximize-btn {
-  background: #28ca42;
-  color: #1a7a2a;
-}
-
-.maximize-btn:hover {
-  background: #32e04a;
-  transform: scale(1.1);
+  background-color: #28a745;
+  color: #fff;
 }
 
 .fullscreen-btn {
-  background: #007acc;
-  color: #ffffff;
-}
-
-.fullscreen-btn:hover {
-  background: #0099ff;
-  transform: scale(1.1);
+  background-color: #17a2b8;
+  color: #fff;
 }
 
 .close-btn {
-  background: #ff5f57;
-  color: #8b0000;
+  background-color: #dc3545;
+  color: #fff;
 }
 
-.close-btn:hover {
-  background: #ff6b6b;
+.control-btn:hover {
+  opacity: 0.8;
   transform: scale(1.1);
+}
+
+/* 画像コンテナ */
+.image-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  animation: swim 8s ease-in-out infinite;
+  will-change: transform;
+  transform-origin: center;
+}
+
+/* 泳ぎアニメーション */
+@keyframes swim {
+  0% {
+    transform: translate(-50%, -50%) translateX(0px) translateY(0px);
+  }
+  12.5% {
+    transform: translate(-50%, -50%) translateX(100px) translateY(-50px);
+  }
+  25% {
+    transform: translate(-50%, -50%) translateX(200px) translateY(-100px);
+  }
+  37.5% {
+    transform: translate(-50%, -50%) translateX(300px) translateY(-50px);
+  }
+  50% {
+    transform: translate(-50%, -50%) translateX(400px) translateY(0px);
+  }
+  62.5% {
+    transform: translate(-50%, -50%) translateX(300px) translateY(50px);
+  }
+  75% {
+    transform: translate(-50%, -50%) translateX(200px) translateY(100px);
+  }
+  87.5% {
+    transform: translate(-50%, -50%) translateX(100px) translateY(50px);
+  }
+  100% {
+    transform: translate(-50%, -50%) translateX(0px) translateY(0px);
+  }
+}
+
+/* メッセージ表示 */
+.messages-container {
+  position: fixed;
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 10px;
+  border-radius: 10px;
+  max-width: 300px;
+  z-index: 100;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  /* 泳ぎアニメーションを削除して固定 */
+}
+
+.messages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.message-item {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-left: 3px solid #007bff;
+}
+
+.message-item:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateX(5px);
+}
+
+.message-text {
+  font-size: 12px;
+  margin-bottom: 2px;
+  line-height: 1.4;
+}
+
+.message-user {
+  font-size: 10px;
+  color: #ccc;
+  font-weight: bold;
+}
+
+/* 返信入力 */
+.reply-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.reply-input {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  min-width: 300px;
+}
+
+.reply-input h4 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+}
+
+.reply-input input {
+  width: 100%;
+  padding: 8px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.reply-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.reply-buttons button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.reply-buttons button:first-child {
+  background-color: #007bff;
+  color: white;
+}
+
+.reply-buttons button:last-child {
+  background-color: #6c757d;
+  color: white;
 }
