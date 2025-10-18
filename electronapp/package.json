@@ -47,10 +47,10 @@
   },
   "devDependencies": {
     "@types/node": "^18.19.130",
-    "concurrently": "^9.2.1",
+    "concurrently": "^8.2.2",
     "electron": "^38.3.0",
     "electron-builder": "^26.0.12",
-    "wait-on": "^9.0.1"
+    "wait-on": "^7.2.0"
   },
   "build": {
     "extends": null,
