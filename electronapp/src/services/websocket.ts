@@ -4,7 +4,8 @@ class WebSocketService {
   private reconnectTimer: NodeJS.Timeout | null = null;
   private listeners: Map<string, Function[]> = new Map();
 
-  connect(url: string = 'ws://localhost:8000') {
+  connect(url: string = process.env.REACT_APP_WS_URL || 'ws://localhost:8000/ws') {
+    console.log('🔌 WebSocket接続先:', url);
     this.ws = new WebSocket(url);
 
     this.ws.onopen = () => {
@@ -21,24 +22,25 @@ class WebSocketService {
     };
 
     this.ws.onmessage = (event) => {
+      console.log('📬 WebSocket RAW受信:', event.data);
       try {
         // pongメッセージの場合はJSON解析をスキップ
         if (event.data === 'pong') {
           console.log('🏓 WebSocket pong受信');
           return;
         }
-        
+
         const data = JSON.parse(event.data);
-        console.log('📨 WebSocket受信:', data);
+        console.log('📨 WebSocket JSON解析成功:', JSON.stringify(data, null, 2));
         this.emit('message', data);
-        
+
         // イベントタイプ別に配信
         if (data.type) {
-          console.log('📨 WebSocketイベント:', data.type, data.data);
+          console.log('📨 WebSocketイベント配信:', data.type, JSON.stringify(data.data, null, 2));
           this.emit(data.type, data.data);
         }
       } catch (e) {
-        console.error('❌ WebSocketメッセージ解析失敗:', e);
+        console.error('❌ WebSocketメッセージ解析失敗:', e, 'RAWデータ:', event.data);
       }
     };
 
