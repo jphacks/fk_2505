@@ -17,11 +17,6 @@ interface Message {
 }
 
 function App() {
-  const [showOverlay, setShowOverlay] = useState(false);
-  const [input, setInput] = useState('');
-  const [response, setResponse] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [showInput, setShowInput] = useState(true);
   const [dragging, setDragging] = useState(false);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartY, setDragStartY] = useState(0);
@@ -114,16 +109,46 @@ function App() {
     };
   }, []);
 
+  // 泳ぎ方向の監視
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const cycleTime = 8000; // 8秒周期
+      const progress = (now % cycleTime) / cycleTime;
+      
+      if (progress < 0.25) {
+        setSwimDirection('right'); // 0-25%: 右に移動
+      } else if (progress < 0.5) {
+        setSwimDirection('right'); // 25-50%: 右に移動
+      } else if (progress < 0.75) {
+        setSwimDirection('left'); // 50-75%: 左に移動
+      } else {
+        setSwimDirection('left'); // 75-100%: 左に移動
+      }
+    }, 100); // 100msごとにチェック
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // 泳ぎ方向の状態
+  const [swimDirection, setSwimDirection] = useState<'left' | 'right' | 'center'>('center');
+
   // 画像切り替えロジック
   const getCurrentImage = () => {
+    // メッセージ数による優先切り替え
     if (messages.length >= 5) {
       return deadImage; // 5件以上でdead.png
     } else if (messages.length >= 3) {
       return angryImage; // 3件以上でangry.png
-    } else if (dragging) {
-      return dragImage; // ドラッグ中はsky.png
+    }
+    
+    // 泳ぎ方向による切り替え
+    if (swimDirection === 'right') {
+      return defaultImage; // 右に動く時はkawaii.png
+    } else if (swimDirection === 'left') {
+      return dragImage; // 左に動く時はsky.png
     } else {
-      return defaultImage; // 通常時はkawaii.png
+      return defaultImage; // 中央はkawaii.png
     }
   };
 
@@ -156,15 +181,7 @@ function App() {
   };
 
   const handleImageClick = () => {
-    if (!isMoveMode && !dragging) {
-      setIsMoveMode(true);
-    }
-    setShowOverlay(!showOverlay);
-    if (!showOverlay) {
-      setInput('');
-      setResponse('');
-      setShowInput(true);
-    }
+    // 画像クリック時の処理を削除（メッセージタップのみ有効）
   };
 
   // メッセージクリック時の処理
@@ -204,71 +221,21 @@ function App() {
   };
 
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  // 不要な関数を削除
+
+  // ドラッグ機能を無効化（自動泳ぎを優先）
+  const handleDragStart = (e: React.MouseEvent<HTMLDivElement>) => {
+    // ドラッグを無効化して自動泳ぎを維持
+    e.preventDefault();
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value);
-  };
-
-  const handleSubmit = async () => {
-    if (!input.trim()) return;
-
-    setIsLoading(true);
-    try {
-      const res = await fetch('http://127.0.0.1:5000/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message: input }),
-      });
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-      const data = await res.json();
-      setResponse(data.response);
-      setShowInput(false);
-    } catch (error) {
-      console.error('Error details:', error);
-      setResponse(`Error: ${(error as Error).message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleReset = () => {
-    setInput('');
-    setResponse('');
-    setShowInput(true);
-  };
-
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement; // HTMLElementにキャスト
-    if (
-      target === inputRef.current ||
-      target === buttonRef.current ||
-      (target.className === 'black-block' && target.tagName === 'DIV') // 黒いブロックに反応しないようにする
-    ) {
-      return;
-    }
-    setDragging(true);
-    setDragStartX(e.clientX - position.x);
-    setDragStartY(e.clientY - position.y);
-  };
-
-  const handleDrag = (e: React.DragEvent<HTMLDivElement>) => {
-    if (dragging) {
-      const newX = e.clientX - dragStartX;
-      const newY = e.clientY - dragStartY;
-      setPosition({ x: newX, y: newY });
-    }
+  const handleDrag = (e: React.MouseEvent<HTMLDivElement>) => {
+    // ドラッグを無効化
+    e.preventDefault();
   };
 
   const handleDragEnd = () => {
-    setDragging(false);
-    setIsMoveMode(false);
+    // ドラッグを無効化
   };
 
   return (
@@ -321,6 +288,21 @@ function App() {
         >
           📤
         </button>
+        {/* 泳ぎ方向表示 */}
+        <div 
+          className="control-btn" 
+          title={`泳ぎ方向: ${swimDirection}`}
+          style={{ 
+            backgroundColor: swimDirection === 'right' ? '#28a745' : swimDirection === 'left' ? '#007bff' : '#6c757d', 
+            color: 'white',
+            fontSize: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          {swimDirection === 'right' ? '→' : swimDirection === 'left' ? '←' : '○'}
+        </div>
       </div>
       
       <div
@@ -330,80 +312,7 @@ function App() {
         onMouseUp={handleDragEnd}
         onMouseLeave={handleDragEnd}
         onClick={handleImageClick}
-        style={{
-          position: 'relative',
-          left: position.x,
-          top: position.y,
-          cursor: isMoveMode || dragging ? 'move' : 'auto',
-        }}
       >
-        {showOverlay && (
-          <div className="overlay" onClick={handleOverlayClick}>
-            {showInput ? (
-              <div className="input-container">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  placeholder="Enter text"
-                  value={input}
-                  onChange={handleInputChange}
-                  disabled={isLoading}
-                />
-                <button ref={buttonRef} onClick={handleSubmit} disabled={isLoading}>
-                  {isLoading ? 'Loading...' : 'Submit'}
-                </button>
-              </div>
-            ) : (
-              <div className="response-container">
-                <div className="response-text">
-                  <p>{response}</p>
-                </div>
-                <button onClick={handleReset}>もう一度話す</button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* メッセージ表示と返信機能 */}
-        {messages.length > 0 && (
-          <div className="messages-container">
-            <div className="messages-list">
-              {messages.slice(0, 3).map((message) => (
-                <div 
-                  key={message.id} 
-                  className="message-item"
-                  onClick={() => handleMessageClick(message)}
-                >
-                  <div className="message-text">{message.text}</div>
-                  <div className="message-user">@{message.user}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 返信入力 */}
-        {showReplyInput && selectedMessage && (
-          <div className="reply-overlay">
-            <div className="reply-input">
-              <h4>返信: {selectedMessage.text}</h4>
-              <input
-                type="text"
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                placeholder="返信を入力..."
-              />
-              <div className="reply-buttons">
-                <button onClick={handleReply}>送信</button>
-                <button onClick={() => {
-                  setShowReplyInput(false);
-                  setSelectedMessage(null);
-                  setReplyText('');
-                }}>キャンセル</button>
-              </div>
-            </div>
-          </div>
-        )}
         <img
           src={getCurrentImage()}
           className="App-image"
@@ -411,6 +320,47 @@ function App() {
           draggable="false"
         />
       </div>
+
+      {/* メッセージ表示と返信機能（画像コンテナの外に移動） */}
+      {messages.length > 0 && (
+        <div className="messages-container">
+          <div className="messages-list">
+            {messages.slice(0, 3).map((message) => (
+              <div 
+                key={message.id} 
+                className="message-item"
+                onClick={() => handleMessageClick(message)}
+              >
+                <div className="message-text">{message.text}</div>
+                <div className="message-user">@{message.user}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 返信入力 */}
+      {showReplyInput && selectedMessage && (
+        <div className="reply-overlay">
+          <div className="reply-input">
+            <h4>返信: {selectedMessage.text}</h4>
+            <input
+              type="text"
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              placeholder="返信を入力..."
+            />
+            <div className="reply-buttons">
+              <button onClick={handleReply}>送信</button>
+              <button onClick={() => {
+                setShowReplyInput(false);
+                setSelectedMessage(null);
+                setReplyText('');
+              }}>キャンセル</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="black-block" />
     </div>
   );
