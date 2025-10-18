@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "target": "es5",
+        // reactと共通のbuildフォルダへ出力
+        "outDir": "../build",
+        // build/electron/に出力
+        "rootDir": "../"
+    },
+    "include": ["src/**/*"]
+}
