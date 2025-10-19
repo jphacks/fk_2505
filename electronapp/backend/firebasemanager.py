@@ -1,5 +1,6 @@
 # managers/firebase_manager.py
 from datetime import datetime
+from typing import Optional
 
 import firebase_setting
 import pytz
@@ -15,11 +16,13 @@ class FirebaseManager:
     def create_or_update_user(
         self,
         user_id: str,
-        real_name: str,
-        display_name: str,
-        email: str = None
+        real_name: Optional[str] = None,
+        display_name: Optional[str] = None,
+        email: Optional[str] = None,
+        slack_team_id: Optional[str] = None,
+        slack_user_token: Optional[str] = None,
     ):
-        """アプリ利用者を登録または更新"""
+        """アプリ利用者を登録または更新（Slack連携情報付き）"""
         ref = self.db.collection("users").document(user_id)
         now = datetime.now(self.tz)
 
@@ -28,7 +31,9 @@ class FirebaseManager:
             "real_name": real_name,
             "display_name": display_name,
             "email": email,
-            "updated_at": now
+            "slack_team_id": slack_team_id,
+            "slack_user_token": slack_user_token,
+            "updated_at": now,
         }
 
         # 既存ユーザなら更新、なければ新規登録
@@ -40,6 +45,35 @@ class FirebaseManager:
             ref.set(data)
 
         return data
+
+    # def create_or_update_user(
+    #     self,
+    #     user_id: str,
+    #     real_name: Optional[str] = None,
+    #     display_name: Optional[str] = None,
+    #     email: Optional[str] = None,
+    # ):
+    #     """アプリ利用者を登録または更新"""
+    #     ref = self.db.collection("users").document(user_id)
+    #     now = datetime.now(self.tz)
+
+    #     data = {
+    #         "user_id": user_id,
+    #         "real_name": real_name,
+    #         "display_name": display_name,
+    #         "email": email,
+    #         "updated_at": now
+    #     }
+
+    #     # 既存ユーザなら更新、なければ新規登録
+    #     doc = ref.get()
+    #     if doc.exists:
+    #         ref.update(data)
+    #     else:
+    #         data["created_at"] = now
+    #         ref.set(data)
+
+    #     return data
     
     def receive_message(
         self,

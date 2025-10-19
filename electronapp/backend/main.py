@@ -6,11 +6,13 @@ from datetime import datetime
 from typing import List, Optional
 
 import firebase_admin
+import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from firebasemanager import firebase_manager
 from pydantic import BaseModel
 from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 
 app = FastAPI()
 load_dotenv()
@@ -23,33 +25,68 @@ SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
 
 slack_client = WebClient(token=os.environ["SLACK_BOT_TOKEN"])
 
+SLACK_CLIENT_ID = os.getenv("SLACK_CLIENT_ID")
+SLACK_CLIENT_SECRET = os.getenv("SLACK_CLIENT_SECRET")
+SLACK_REDIRECT_URI = os.getenv("SLACK_REDIRECT_URI")
+
 
 
 # --- 🔹 リクエストモデル定義 ---
+class SlackReplyRequest(BaseModel):
+    user_id: str
+    channel: str
+    text: str
+    thread_ts: str | None = None
+    
 class UserRegisterRequest(BaseModel):
-    user_id: str                     # ← 必須
-    real_name: Optional[str] = None  # ← 任意
-    display_name: Optional[str] = None
-    email: Optional[str] = None
-
-
+    real_name: str | None = None
+    display_name: str | None = None
+    email: str | None = None
+    slack_code: str | None = None  # 👈 Slack OAuth認可コードを追加
 # --- 🔹 Firestore 登録API ---
 @app.post("/register-user")
 async def register_user(user: UserRegisterRequest):
     """
-    デスクトップアプリ導入時にユーザー情報をFirestoreへ登録するAPI
-    （user_idのみ必須、他は任意）
+    デスクトップアプリ導入時にユーザー情報＋Slack OAuthトークンをFirestoreへ登録
     """
     try:
-        # FirebaseManagerのメソッド呼び出し
-        data = firebase_manager.create_or_update_user(
-            user_id=user.user_id,
+        # 🔹 Slack OAuth認証がある場合はトークン取得
+        slack_user_token = None
+        slack_team_id = None
+        slack_user_id = None
+
+        if user.slack_code:
+            async with httpx.AsyncClient() as client:
+                res = await client.post(
+                    "https://slack.com/api/oauth.v2.access",
+                    data={
+                        "client_id": SLACK_CLIENT_ID,
+                        "client_secret": SLACK_CLIENT_SECRET,
+                        "code": user.slack_code,
+                        "redirect_uri": SLACK_REDIRECT_URI,
+                    },
+                )
+                data = res.json()
+                print(json.dumps(data, indent=2, ensure_ascii=False))
+                print("📥 Slack OAuth Response:", data)  # ← デバッグ出力
+                if not data.get("ok"):
+                    raise HTTPException(status_code=400, detail=f"Slack OAuth failed: {data}")
+                slack_user_token = data.get("authed_user", {}).get("access_token")
+                slack_user_id = data.get("authed_user", {}).get("id")
+                slack_team_id = data.get("team", {}).get("id")
+                print("✅ Slack OAuth成功:", data)
+
+        # 🔹 Firestore登録（既存メソッド呼び出し）
+        firestore_data = firebase_manager.create_or_update_user(
+            user_id=slack_user_id or "",
             real_name=user.real_name or "",
             display_name=user.display_name or "",
-            email=user.email or None
+            email=user.email or "",
+            slack_team_id=slack_team_id or "",
+            slack_user_token=slack_user_token or ""
         )
 
-        return {"status": "success", "data": data}
+        return {"status": "success", "data": firestore_data}
 
     except Exception as e:
         print("❌ Firestore登録エラー:", e)
@@ -122,6 +159,9 @@ async def slack_event(request: Request):
             channel_type=event.get("channel_type", "im")
         )
 
+     # ✅ WebSocket経由でフロントにブロードキャスト
+    await handle_message(event)
+    
     return {"ok": True}
 
 # =========================================================
@@ -180,5 +220,46 @@ async def handle_message(event: dict):
     # 切断されたクライアントを削除
     for connection in disconnected:
         active_connections.remove(connection)
+
+# =========================================================
+# 📤 Slack返信エンドポイント
+# =========================================================
+@app.post("/slack/reply")
+async def slack_reply(req: SlackReplyRequest):
+    """
+    Firestoreに保存されたSlackユーザートークンで本人として返信
+    """
+    try:
+        # --- Firestoreからユーザー情報取得 ---
+        user_doc = firebase_manager.db.collection("users").document(req.user_id).get()
+        if not user_doc.exists:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        user_data = user_doc.to_dict()
+        slack_token = user_data.get("slack_user_token")
+
+        if not slack_token:
+            raise HTTPException(status_code=400, detail="Slack user token not found")
+
+        # --- Slackクライアント初期化（本人のトークン）---
+        client = WebClient(token=slack_token)
+
+        # --- メッセージ送信 ---
+        response = client.chat_postMessage(
+            channel=req.channel,
+            text=req.text,
+            thread_ts=req.thread_ts
+        )
+
+        print("✅ Slack送信成功:", response.data)
+        return {"status": "success", "message_ts": response.data.get("ts")}
+
+    except SlackApiError as e:
+        print("❌ Slack APIエラー:", e.response.data)
+        raise HTTPException(status_code=500, detail=f"Slack API error: {e.response.data}")
+
+    except Exception as e:
+        print("❌ Slack返信APIエラー:", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
