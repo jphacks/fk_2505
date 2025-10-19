@@ -182,6 +182,18 @@ async def slack_event(request: Request):
             is_see=False,
             channel_type=event.get("channel_type", "im")
         )
+    
+    # 🤖 AI緊急度判定
+    print(f"🤖 緊急度判定開始: {text}")
+    urgency = await analyze_urgency(text)
+    print(f"📊 緊急度: {urgency}")
+
+    # ✅ 緊急度が「高」の場合のみWebSocketで送信
+    if urgency == "高":
+        print(f"📤 緊急度が高いため、WebSocketで送信します")
+        await handle_message(event)
+    else:
+        print(f"⏭️  緊急度が'{urgency}'のためWebSocket送信をスキップ")
 
     return {"ok": True}
 
