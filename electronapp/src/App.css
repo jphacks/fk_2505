@@ -82,11 +82,38 @@
   object-fit: contain;
   cursor: pointer;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
-  transition: transform 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform-origin: center;
 }
 
 .App-image:hover {
-  transform: scale(1.05);
+  transform: scale(1.1) rotate(5deg);
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
+}
+
+.App-image:active {
+  transform: scale(0.95);
+  transition: transform 0.1s ease;
+}
+
+/* フグクリック時の特別なアニメーション */
+.App-image.clicked {
+  animation: fishClick 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+@keyframes fishClick {
+  0% {
+    transform: scale(1) rotate(0deg);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.2) rotate(10deg);
+    filter: brightness(1.3);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    filter: brightness(1);
+  }
 }
 
 /* ウィンドウ操作ボタン */
@@ -147,6 +174,333 @@
   transform-origin: center;
 }
 
+/* フグ群表示 */
+.fish-swarm {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 50px;
+  padding: 100px;
+  box-sizing: border-box;
+  align-items: center;
+  justify-items: center;
+}
+
+.app-fish {
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+  z-index: 100;
+  will-change: transform;
+}
+
+/* 各フグの個別アニメーション */
+.app-fish:nth-child(1) {
+  animation: fishSwim1 8s ease-in-out infinite;
+  animation-delay: 0s;
+}
+
+.app-fish:nth-child(2) {
+  animation: fishSwim2 10s ease-in-out infinite;
+  animation-delay: 1.5s;
+}
+
+.app-fish:nth-child(3) {
+  animation: fishSwim3 7s ease-in-out infinite;
+  animation-delay: 3s;
+}
+
+.app-fish:nth-child(4) {
+  animation: fishSwim4 9s ease-in-out infinite;
+  animation-delay: 4.5s;
+}
+
+.app-fish:hover {
+  transform: scale(1.1);
+  animation-play-state: paused;
+}
+
+.app-fish:active {
+  transform: scale(0.95);
+}
+
+.fish-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-icon {
+  font-size: 24px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.app-name {
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  background: var(--color);
+  padding: 4px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+/* フグ1: ランダムな泳ぎ */
+@keyframes fishSwim1 {
+  0% {
+    transform: translate(-50%, -50%) translateX(0px) translateY(0px);
+  }
+  20% {
+    transform: translate(-50%, -50%) translateX(150px) translateY(-80px);
+  }
+  40% {
+    transform: translate(-50%, -50%) translateX(200px) translateY(50px);
+  }
+  60% {
+    transform: translate(-50%, -50%) translateX(50px) translateY(120px);
+  }
+  80% {
+    transform: translate(-50%, -50%) translateX(-100px) translateY(-30px);
+  }
+  100% {
+    transform: translate(-50%, -50%) translateX(0px) translateY(0px);
+  }
+}
+
+/* フグ2: ランダムな泳ぎ */
+@keyframes fishSwim2 {
+  0% {
+    transform: translate(-50%, -50%) translateX(0px) translateY(0px);
+  }
+  25% {
+    transform: translate(-50%, -50%) translateX(-120px) translateY(100px);
+  }
+  50% {
+    transform: translate(-50%, -50%) translateX(80px) translateY(-60px);
+  }
+  75% {
+    transform: translate(-50%, -50%) translateX(180px) translateY(80px);
+  }
+  100% {
+    transform: translate(-50%, -50%) translateX(0px) translateY(0px);
+  }
+}
+
+/* フグ3: ランダムな泳ぎ */
+@keyframes fishSwim3 {
+  0% {
+    transform: translate(-50%, -50%) translateX(0px) translateY(0px);
+  }
+  30% {
+    transform: translate(-50%, -50%) translateX(100px) translateY(-100px);
+  }
+  60% {
+    transform: translate(-50%, -50%) translateX(-80px) translateY(60px);
+  }
+  100% {
+    transform: translate(-50%, -50%) translateX(0px) translateY(0px);
+  }
+}
+
+/* フグ4: ランダムな泳ぎ */
+@keyframes fishSwim4 {
+  0% {
+    transform: translate(-50%, -50%) translateX(0px) translateY(0px);
+  }
+  15% {
+    transform: translate(-50%, -50%) translateX(-150px) translateY(-50px);
+  }
+  35% {
+    transform: translate(-50%, -50%) translateX(120px) translateY(90px);
+  }
+  55% {
+    transform: translate(-50%, -50%) translateX(200px) translateY(-40px);
+  }
+  75% {
+    transform: translate(-50%, -50%) translateX(-60px) translateY(110px);
+  }
+  100% {
+    transform: translate(-50%, -50%) translateX(0px) translateY(0px);
+  }
+}
+
+/* アプリケーション別画面 */
+.app-page {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  animation: pageTransitionIn 0.4s ease-out;
+}
+
+@keyframes pageTransitionIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0px);
+  }
+}
+
+.app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 15px 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+}
+
+.back-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateX(-2px);
+}
+
+.app-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+/* フグの震えエフェクト */
+.App-image.shake {
+  animation: fishShake 0.5s ease-in-out;
+}
+
+@keyframes fishShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-2px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(2px);
+  }
+}
+
+/* Slackフグ専用のメッセージ表示 */
+.slack-message-follow {
+  position: fixed;
+  z-index: 2000;
+  pointer-events: none;
+}
+
+.slack-bubble {
+  background: linear-gradient(135deg, #4A154B 0%, #6B2C91 100%);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 20px;
+  max-width: 250px;
+  box-shadow: 0 6px 24px rgba(74, 21, 75, 0.4);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  animation: slackBubbleFloat 2s ease-in-out infinite;
+}
+
+.slack-badge {
+  font-size: 10px;
+  font-weight: bold;
+  color: #FFD700;
+  margin-bottom: 4px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 8px;
+  display: inline-block;
+}
+
+.slack-message-text {
+  font-size: 12px;
+  line-height: 1.3;
+  margin-bottom: 4px;
+  word-wrap: break-word;
+}
+
+.slack-message-user {
+  font-size: 10px;
+  color: #FFD700;
+  font-weight: bold;
+  text-align: right;
+}
+
+@keyframes slackBubbleFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* パーティクル効果 */
+.particles-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1500;
+}
+
+.particle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  background: #4fc3f7;
+  border-radius: 50%;
+  animation: particleExplode 0.6s ease-out forwards;
+  animation-delay: var(--delay);
+}
+
+@keyframes particleExplode {
+  0% {
+    transform: translate(-50%, -50%) translateX(0) translateY(0) scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translateX(calc(cos(var(--angle)) * var(--distance))) translateY(calc(sin(var(--angle)) * var(--distance))) scale(0);
+    opacity: 0;
+  }
+}
+
 /* 泳ぎアニメーション */
 @keyframes swim {
   0% {
@@ -192,6 +546,18 @@
   z-index: 100;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   /* 泳ぎアニメーションを削除して固定 */
+  animation: slideInFromRight 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes slideInFromRight {
+  0% {
+    transform: translateY(-50%) translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(-50%) translateX(0);
+    opacity: 1;
+  }
 }
 
 .messages-list {
@@ -238,6 +604,16 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 .reply-input {
@@ -245,6 +621,19 @@
   padding: 20px;
   border-radius: 10px;
   min-width: 300px;
+  animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes scaleIn {
+  0% {
+    transform: scale(0.8) translateY(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
 }
 
 .reply-input h4 {
