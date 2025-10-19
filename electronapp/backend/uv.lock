@@ -37,6 +37,7 @@ dependencies = [
     { name = "firebase-admin" },
     { name = "python-dotenv" },
     { name = "pytz" },
+    { name = "slack-sdk" },
     { name = "uvicorn" },
     { name = "websockets" },
 ]
@@ -47,6 +48,7 @@ requires-dist = [
     { name = "firebase-admin", specifier = ">=7.1.0" },
     { name = "python-dotenv", specifier = ">=1.1.1" },
     { name = "pytz", specifier = ">=2025.2" },
+    { name = "slack-sdk", specifier = ">=3.37.0" },
     { name = "uvicorn", specifier = ">=0.37.0" },
     { name = "websockets", specifier = ">=14.1" },
 ]
@@ -737,6 +739,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/da/8a/22b7beea3ee0d44b1916c0c1cb0ee3af23b700b6da9f04991899d0c555d4/rsa-4.9.1.tar.gz", hash = "sha256:e7bdbfdb5497da4c07dfd35530e1a902659db6ff241e39d9953cad06ebd0ae75", size = 29034, upload-time = "2025-04-16T09:51:18.218Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/64/8d/0133e4eb4beed9e425d9a98ed6e081a55d195481b7632472be1af08d2f6b/rsa-4.9.1-py3-none-any.whl", hash = "sha256:68635866661c6836b8d39430f97a996acbd61bfa49406748ea243539fe239762", size = 34696, upload-time = "2025-04-16T09:51:17.142Z" },
+]
+
+[[package]]
+name = "slack-sdk"
+version = "3.37.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/8e/c2/0a174a155623d7dc3ed4d1360cdf755590acdc2c3fc9ce0d2340f468909f/slack_sdk-3.37.0.tar.gz", hash = "sha256:242d6cffbd9e843af807487ff04853189b812081aeaa22f90a8f159f20220ed9", size = 241612, upload-time = "2025-10-06T23:07:20.856Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/07/fd/a502ee24d8c7d12a8f749878ae0949b8eeb50aeac22dc5a613d417a256d0/slack_sdk-3.37.0-py2.py3-none-any.whl", hash = "sha256:e108a0836eafda74d8a95e76c12c2bcb010e645d504d8497451e4c7ebb229c87", size = 302751, upload-time = "2025-10-06T23:07:19.542Z" },
 ]
 
 [[package]]

@@ -9,6 +9,7 @@ dependencies = [
     "firebase-admin>=7.1.0",
     "python-dotenv>=1.1.1",
     "pytz>=2025.2",
+    "slack-sdk>=3.37.0",
     "uvicorn>=0.37.0",
     "websockets>=14.1",
 ]

@@ -40,25 +40,45 @@ class FirebaseManager:
             ref.set(data)
 
         return data
-
-
-    def receive_message(self, receiver_id: str, sender_id: str,
-                     message_id: str, channel_id: str, text: str,
-                     is_ai=False, is_bot=False, is_see=False, channel_type="im"):
+    
+    def receive_message(
+        self,
+        receiver_id: str,
+        sender_id: str,
+        message_id: str,
+        channel_id: str,
+        text: str,
+        is_ai: bool = False,
+        is_bot: bool = False,
+        is_see: bool = False,
+        channel_type: str = "im",
+    ):
         """
-        Firestoreにメッセージを保存
-        receiver_id : Firestore上のアプリ利用者（自分）
-        sender_id   : 発信者のSlackユーザID（relationsで参照）
+        Firestore にメッセージを保存。
+        receiver_id: Firestore 上のアプリ利用者（自分）
+        sender_id  : 発信者の Slack ユーザー ID
         """
-        ref = (
-            self.db.collection("users")
-            .document(receiver_id)
+        user_ref = self.db.collection("users").document(receiver_id)
+        user_doc = user_ref.get()
+        
+        # 🔍 デバッグ出力追加
+        print(f"🔍 Firestore Document Path: users/{receiver_id}")
+        print(f"🔍 Exists?: {user_doc.exists}")
+        print(f"🔍 Raw Document Data: {user_doc.to_dict()}")
+
+        if not user_doc.exists:
+            print(f"⚠️ Firestore: ユーザー {receiver_id} は未登録のためメッセージを保存しません。")
+            return None
+
+        now = datetime.now(self.tz)
+
+        message_ref = (
+            user_ref
             .collection("messages")
             .document(message_id)
         )
 
-        now = datetime.now(self.tz)
-        data = {
+        message_data = {
             "sender_id": sender_id,
             "receiver_id": receiver_id,
             "slack_message_id": message_id,
@@ -69,11 +89,12 @@ class FirebaseManager:
             "is_see": is_see,
             "channel_type": channel_type,
             "timestamp": now,
-            "created_at": now
+            "created_at": now,
         }
 
-        ref.set(data)
-        return data
+        message_ref.set(message_data)
+        print(f"✅ Firestore: {receiver_id} の messages に保存完了 ({message_id})")
+        return message_data
     
     def send_message(self, receiver_id: str, sender_id: str,
                      message_id: str, channel_id: str, text: str,
