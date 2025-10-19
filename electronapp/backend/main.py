@@ -3,11 +3,14 @@ import hmac
 import json
 import os
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 import firebase_admin
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from firebasemanager import firebase_manager
+from pydantic import BaseModel
+from slack_sdk import WebClient
 
 app = FastAPI()
 load_dotenv()
@@ -18,7 +21,39 @@ active_connections: List[WebSocket] = []
 SLACK_SIGNING_SECRET = os.getenv("SLACK_SIGNING_SECRET")
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
 
+slack_client = WebClient(token=os.environ["SLACK_BOT_TOKEN"])
 
+
+
+# --- 🔹 リクエストモデル定義 ---
+class UserRegisterRequest(BaseModel):
+    user_id: str                     # ← 必須
+    real_name: Optional[str] = None  # ← 任意
+    display_name: Optional[str] = None
+    email: Optional[str] = None
+
+
+# --- 🔹 Firestore 登録API ---
+@app.post("/register-user")
+async def register_user(user: UserRegisterRequest):
+    """
+    デスクトップアプリ導入時にユーザー情報をFirestoreへ登録するAPI
+    （user_idのみ必須、他は任意）
+    """
+    try:
+        # FirebaseManagerのメソッド呼び出し
+        data = firebase_manager.create_or_update_user(
+            user_id=user.user_id,
+            real_name=user.real_name or "",
+            display_name=user.display_name or "",
+            email=user.email or None
+        )
+
+        return {"status": "success", "data": data}
+
+    except Exception as e:
+        print("❌ Firestore登録エラー:", e)
+        raise HTTPException(status_code=500, detail="Failed to register user.")
 
 
 # =========================================================
@@ -44,36 +79,48 @@ def verify_slack_request(request: Request, body: bytes) -> bool:
     # Slackの署名と比較
     return hmac.compare_digest(my_signature, signature)
 
-#slackイベント受信エンドポイント
+
 @app.post("/slack/event")
 async def slack_event(request: Request):
-    """Slack Event Subscriptions endpoint"""
     body = await request.body()
     print("Headers:", request.headers)
 
-    # まずJSONを解析
+    # ✅ Slack署名検証（本番運用では必須）
+    if not verify_slack_request(request, body):
+        raise HTTPException(status_code=403, detail="Invalid signature")
+    
     data = json.loads(body.decode("utf-8"))
-    print("=== Slackから届いたデータ ===")
-    print(json.dumps(data, indent=2, ensure_ascii=False))
 
-    # ✅ URL検証（Slack初回設定時のみ）署名検証より先にチェック
+    # ✅ URL検証（Slack初回設定時のみ）
     if data.get("type") == "url_verification":
         print("✅ challenge確認リクエストを受信しました")
         return {"challenge": data["challenge"]}
-
-    # ✅ Slack署名検証（通常のイベントのみ）
-    if not verify_slack_request(request, body):
-        raise HTTPException(status_code=403, detail="Invalid signature")
-
+    
     # ✅ 通常イベント内容の確認
-    if data.get("type") == "event_callback":
-        event = data.get("event", {})
-        print(f"[イベントタイプ] {event.get('type')}")
-        print(f"[送信者] {event.get('user')}")
-        print(f"[メッセージ内容] {event.get('text')}")
+    event = data.get("event", {})
+    channel_id = event.get("channel")
+    sender_id = event.get("user")
+    text = event.get("text")
+    ts = event.get("ts")
 
+    # チャンネルの全メンバーを取得
+    members_response = slack_client.conversations_members(channel=channel_id)
+    channel_members = members_response["members"]
+    print("👥 チャンネルメンバー一覧:", channel_members)
 
-        await handle_message(event)
+    # 各ユーザーに対してメッセージ保存
+    for receiver_id in channel_members:
+        firebase_manager.receive_message(
+            receiver_id=receiver_id,  # 🔥 アプリ利用者（Botではない）
+            sender_id=sender_id,      # 発言者
+            message_id=ts,
+            channel_id=channel_id,
+            text=text,
+            is_ai=False,
+            is_bot=False,
+            is_see=False,
+            channel_type=event.get("channel_type", "im")
+        )
 
     return {"ok": True}
 
@@ -133,4 +180,5 @@ async def handle_message(event: dict):
     # 切断されたクライアントを削除
     for connection in disconnected:
         active_connections.remove(connection)
+
 
