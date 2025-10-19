@@ -28,6 +28,22 @@ function App() {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [replyText, setReplyText] = useState('');
   const [showReplyInput, setShowReplyInput] = useState(false);
+  
+  // アプリケーション別の状態
+  const [currentApp, setCurrentApp] = useState<string | null>(null);
+  const [appMessages, setAppMessages] = useState<Record<string, Message[]>>({
+    slack: [],
+    line: [],
+    discord: [],
+    teams: []
+  });
+  
+  // 新規メッセージの吹き出し表示
+  const [newMessage, setNewMessage] = useState<Message | null>(null);
+  const [showBubble, setShowBubble] = useState(false);
+  
+  // パーティクル効果
+  const [showParticles, setShowParticles] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -55,27 +71,28 @@ function App() {
       console.error('❌ WebSocketエラー:', error);
     };
     
-    // 新しいメッセージを受信
-    const handleNewMessage = (data: Message) => {
-      console.log('📨 新メッセージ受信:', data);
-      setMessages(prev => {
-        // 重複チェック：同じIDのメッセージが既に存在する場合は追加しない
-        const exists = prev.some(msg => msg.id === data.id);
-        if (exists) {
-          console.log('⚠️ 重複メッセージをスキップ:', data.id);
-          return prev;
-        }
-        return [data, ...prev];
-      });
-      
-      // デスクトップ通知
-      if (Notification.permission === 'granted') {
-        new Notification('新しいメッセージ', {
-          body: data.text,
-          icon: '/icon.png'
-        });
-      }
-    };
+          // 新しいメッセージを受信
+          const handleNewMessage = (data: Message) => {
+            console.log('📨 新メッセージ受信:', data);
+            
+            // 吹き出し表示
+            setNewMessage(data);
+            setShowBubble(true);
+            
+            // 3秒後に吹き出しを非表示
+            setTimeout(() => {
+              setShowBubble(false);
+              setNewMessage(null);
+            }, 3000);
+            
+            // デスクトップ通知
+            if (Notification.permission === 'granted') {
+              new Notification('新しいメッセージ', {
+                body: data.text,
+                icon: '/icon.png'
+              });
+            }
+          };
 
     // 未読メッセージ更新を受信
     const handleUnreadUpdate = (data: any) => {
@@ -135,11 +152,14 @@ function App() {
 
   // 画像切り替えロジック
   const getCurrentImage = () => {
-    // メッセージ数による優先切り替え
-    if (messages.length >= 5) {
-      return deadImage; // 5件以上でdead.png
-    } else if (messages.length >= 3) {
-      return angryImage; // 3件以上でangry.png
+    // アプリケーション別画面でのみメッセージ数による切り替え
+    if (currentApp && appMessages[currentApp]) {
+      const appMsgCount = appMessages[currentApp].length;
+      if (appMsgCount >= 5) {
+        return deadImage; // 5件以上でdead.png
+      } else if (appMsgCount >= 3) {
+        return angryImage; // 3件以上でangry.png
+      }
     }
     
     // 泳ぎ方向による切り替え
@@ -180,9 +200,43 @@ function App() {
     }
   };
 
-  const handleImageClick = () => {
-    // 画像クリック時の処理を削除（メッセージタップのみ有効）
+  const [isClicked, setIsClicked] = useState(false);
+
+  // アプリケーション別フグの定義
+  const apps = [
+    { id: 'slack', name: 'Slack', color: '#4A154B', icon: '💬' },
+    { id: 'line', name: 'LINE', color: '#00C300', icon: '💚' },
+    { id: 'discord', name: 'Discord', color: '#5865F2', icon: '🎮' },
+    { id: 'teams', name: 'Teams', color: '#6264A7', icon: '👥' }
+  ];
+
+  const handleAppClick = async (appId: string) => {
+    // パーティクル効果を発動
+    setShowParticles(true);
+    setTimeout(() => setShowParticles(false), 600);
+    
+    setCurrentApp(appId);
+    setIsClicked(true);
+    setTimeout(() => setIsClicked(false), 500);
+    
+    // 詳細画面でDBから未読一覧を取得
+    try {
+      console.log(`🔍 ${appId}の未読メッセージを取得中...`);
+      const unreadMessages = await api.getUnreadMessages(appId);
+      setAppMessages(prev => ({
+        ...prev,
+        [appId]: unreadMessages
+      }));
+      console.log(`✅ ${appId}の未読メッセージ取得完了:`, unreadMessages);
+    } catch (error) {
+      console.error(`❌ ${appId}の未読メッセージ取得失敗:`, error);
+    }
   };
+
+  const handleBackToHome = () => {
+    setCurrentApp(null);
+  };
+
 
   // メッセージクリック時の処理
   const handleMessageClick = (message: Message) => {
@@ -200,6 +254,15 @@ function App() {
       timestamp: Date.now().toString()
     };
     setMessages(prev => [testMessage, ...prev]);
+    
+    // アプリケーション別にも追加
+    if (currentApp) {
+      setAppMessages(prev => ({
+        ...prev,
+        [currentApp]: [testMessage, ...(prev[currentApp] || [])]
+      }));
+    }
+    
     console.log('🧪 テストメッセージ追加:', testMessage);
   };
 
@@ -270,15 +333,15 @@ function App() {
         >
           ×
         </button>
-        {/* テスト用ボタン */}
-        <button 
-          className="control-btn" 
-          onClick={addTestMessage}
-          title="テストメッセージ追加"
-          style={{ backgroundColor: '#6f42c1', color: 'white' }}
-        >
-          🧪
-        </button>
+               {/* テスト用ボタン */}
+               <button 
+                 className="control-btn" 
+                 onClick={addTestMessage}
+                 title="テストメッセージ追加"
+                 style={{ backgroundColor: '#6f42c1', color: 'white' }}
+               >
+                 🧪
+               </button>
         {/* HTTP送信テストボタン */}
         <button 
           className="control-btn" 
@@ -305,27 +368,66 @@ function App() {
         </div>
       </div>
       
-      <div
-        className="image-container"
-        onMouseDown={handleDragStart}
-        onMouseMove={handleDrag}
-        onMouseUp={handleDragEnd}
-        onMouseLeave={handleDragEnd}
-        onClick={handleImageClick}
-      >
-        <img
-          src={getCurrentImage()}
-          className="App-image"
-          alt="Character"
-          draggable="false"
-        />
-      </div>
+      {/* 初期画面: 複数フグ表示 */}
+      {!currentApp && (
+        <div className="fish-swarm">
+          {apps.map((app, index) => (
+            <div
+              key={app.id}
+              className="app-fish"
+              style={{
+                '--delay': `${index * 0.5}s`,
+                '--color': app.color
+              } as React.CSSProperties}
+              onClick={() => handleAppClick(app.id)}
+            >
+              <div className="fish-container">
+                <img
+                  src={getCurrentImage()}
+                  className={`App-image ${isClicked ? 'clicked' : ''}`}
+                  alt={`${app.name} Fish`}
+                  draggable="false"
+                />
+                <div className="app-icon">{app.icon}</div>
+                <div className="app-name">{app.name}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-      {/* メッセージ表示と返信機能（画像コンテナの外に移動） */}
-      {messages.length > 0 && (
+      {/* アプリケーション別画面: 単一フグ + メッセージ */}
+      {currentApp && (
+        <div className="app-page">
+          <div className="app-header">
+            <button className="back-button" onClick={handleBackToHome}>
+              ← 戻る
+            </button>
+            <h2>{apps.find(app => app.id === currentApp)?.name}</h2>
+          </div>
+          
+          <div
+            className="image-container"
+            onMouseDown={handleDragStart}
+            onMouseMove={handleDrag}
+            onMouseUp={handleDragEnd}
+            onMouseLeave={handleDragEnd}
+          >
+            <img
+              src={getCurrentImage()}
+              className={`App-image ${isClicked ? 'clicked' : ''}`}
+              alt="Character"
+              draggable="false"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* メッセージ表示と返信機能（アプリケーション別画面でのみ表示） */}
+      {currentApp && appMessages[currentApp] && appMessages[currentApp].length > 0 && (
         <div className="messages-container">
           <div className="messages-list">
-            {messages.slice(0, 3).map((message) => (
+            {appMessages[currentApp].slice(0, 3).map((message) => (
               <div 
                 key={message.id} 
                 className="message-item"
@@ -335,6 +437,33 @@ function App() {
                 <div className="message-user">@{message.user}</div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* パーティクル効果 */}
+      {showParticles && (
+        <div className="particles-container">
+          {[...Array(8)].map((_, i) => (
+            <div
+              key={i}
+              className="particle"
+              style={{
+                '--delay': `${i * 0.1}s`,
+                '--angle': `${i * 45}deg`,
+                '--distance': `${80 + (i % 3) * 40}px`
+              } as React.CSSProperties}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* 新規メッセージの吹き出し表示 */}
+      {showBubble && newMessage && (
+        <div className="message-bubble">
+          <div className="bubble-content">
+            <div className="bubble-text">{newMessage.text}</div>
+            <div className="bubble-user">@{newMessage.user}</div>
           </div>
         </div>
       )}

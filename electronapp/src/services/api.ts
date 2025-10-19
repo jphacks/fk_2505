@@ -28,32 +28,38 @@ export const api = {
   },
 
   // 未読メッセージ取得（モック版）
-  getUnreadMessages: async () => {
-    console.log('🌐 HTTP GET (モック):', `${API_BASE}/messages/unread`);
+  getUnreadMessages: async (appId?: string) => {
+    const endpoint = appId ? `${API_BASE}/messages/unread/${appId}` : `${API_BASE}/messages/unread`;
+    console.log('🌐 HTTP GET (モック):', endpoint);
     
     // モック：実際のHTTP送信をシミュレート
     await new Promise(resolve => setTimeout(resolve, 500)); // 0.5秒待機
     
-    const mockResponse = {
-      messages: [
-        {
-          id: 'mock_msg_1',
-          channel: 'C1234567890',
-          user: 'U1234567890',
-          text: 'モック未読メッセージ 1',
-          timestamp: Date.now().toString()
-        },
-        {
-          id: 'mock_msg_2',
-          channel: 'C1234567890',
-          user: 'U1234567890',
-          text: 'モック未読メッセージ 2',
-          timestamp: Date.now().toString()
-        }
+    // アプリケーション別のダミーメッセージ
+    const appMessages: Record<string, any[]> = {
+      slack: [
+        { id: 'slack_1', channel: 'C1234567890', user: 'U1234567890', text: 'Slack未読メッセージ 1', timestamp: Date.now().toString() },
+        { id: 'slack_2', channel: 'C1234567890', user: 'U1234567890', text: 'Slack未読メッセージ 2', timestamp: Date.now().toString() },
+        { id: 'slack_3', channel: 'C1234567890', user: 'U1234567890', text: 'Slack未読メッセージ 3', timestamp: Date.now().toString() }
+      ],
+      line: [
+        { id: 'line_1', channel: 'C1234567890', user: 'U1234567890', text: 'LINE未読メッセージ 1', timestamp: Date.now().toString() },
+        { id: 'line_2', channel: 'C1234567890', user: 'U1234567890', text: 'LINE未読メッセージ 2', timestamp: Date.now().toString() }
+      ],
+      discord: [
+        { id: 'discord_1', channel: 'C1234567890', user: 'U1234567890', text: 'Discord未読メッセージ 1', timestamp: Date.now().toString() }
+      ],
+      teams: [
+        { id: 'teams_1', channel: 'C1234567890', user: 'U1234567890', text: 'Teams未読メッセージ 1', timestamp: Date.now().toString() },
+        { id: 'teams_2', channel: 'C1234567890', user: 'U1234567890', text: 'Teams未読メッセージ 2', timestamp: Date.now().toString() },
+        { id: 'teams_3', channel: 'C1234567890', user: 'U1234567890', text: 'Teams未読メッセージ 3', timestamp: Date.now().toString() },
+        { id: 'teams_4', channel: 'C1234567890', user: 'U1234567890', text: 'Teams未読メッセージ 4', timestamp: Date.now().toString() }
       ]
     };
     
-    console.log('🌐 HTTP レスポンス (モック):', mockResponse);
-    return mockResponse.messages;
+    const messages = appId ? appMessages[appId] || [] : appMessages.slack;
+    
+    console.log('🌐 HTTP レスポンス (モック):', { appId, messages });
+    return messages;
   }
 };
