@@ -21,13 +21,34 @@ active_connections: List[WebSocket] = []
 # ===== Slack環境変数 =====
 SLACK_SIGNING_SECRET = os.getenv("SLACK_SIGNING_SECRET")
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
-# ===== Gemini環境変数 =====
+
+# ===== AI API環境変数（Gemini優先、OpenAIフォールバック） =====
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# Gemini初期化
+gemini_model = None
 if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    gemini_model = genai.GenerativeModel('gemini-2.5-flash')
-else:
-    gemini_model = None
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        gemini_model = genai.GenerativeModel('gemini-2.5-flash')
+        print("✅ Gemini API初期化完了")
+    except Exception as e:
+        print(f"⚠️ Gemini API初期化失敗: {e}")
+
+# OpenAI初期化
+openai_client = None
+if OPENAI_API_KEY:
+    try:
+        from openai import OpenAI
+        openai_client = OpenAI(api_key=OPENAI_API_KEY)
+        print("✅ OpenAI API初期化完了")
+    except Exception as e:
+        print(f"⚠️ OpenAI API初期化失敗: {e}")
+
+# どちらも設定されていない場合は警告
+if not gemini_model and not openai_client:
+    print("⚠️ 警告: Gemini/OpenAI API両方とも未設定です。緊急度判定はデフォルト値を返します。")
 
 slack_client = WebClient(token=os.environ["SLACK_BOT_TOKEN"])
 
@@ -65,19 +86,16 @@ async def register_user(user: UserRegisterRequest):
 
 
 # =========================================================
-# 🤖 Gemini緊急度判定関数
+# 🤖 AI緊急度判定関数（Gemini優先、OpenAIフォールバック）
 # =========================================================
 async def analyze_urgency(text: str) -> str:
     """
-    Google Gemini APIを使用してメッセージの緊急度を判定
+    AI APIを使用してメッセージの緊急度を判定
+    Gemini優先、失敗時はOpenAIにフォールバック
     Returns: "低" | "中" | "高"
     """
-    if not gemini_model:
-        print("⚠️ Gemini API未設定 - デフォルトで'中'を返します")
-        return "中"
-
-    try:
-        prompt = f"""あなたはSlackメッセージの緊急度を判定するAIです。
+    # 判定用プロンプト（f-stringで変数展開）
+    prompt_text = f"""あなたはSlackメッセージの緊急度を判定するAIです。
 以下の基準で判定してください:
 
 【高】即座の対応が必要
@@ -102,20 +120,49 @@ async def analyze_urgency(text: str) -> str:
 メッセージ:
 {text}"""
 
-        response = gemini_model.generate_content(prompt)
-        urgency = response.text.strip()
-        print(f"🤖 AI判定結果: '{urgency}'")
+    # ✅ 1. Gemini APIを試す
+    if gemini_model:
+        try:
+            print("🔵 Gemini APIで判定中...")
+            response = gemini_model.generate_content(prompt_text)
+            urgency = response.text.strip()
+            print(f"🤖 Gemini判定結果: '{urgency}'")
 
-        # 正規化
-        if urgency in ["低", "中", "高"]:
-            return urgency
-        else:
-            print(f"⚠️ 予期しない判定結果: {urgency} - デフォルトで'中'を返します")
-            return "中"
+            # 正規化
+            if urgency in ["低", "中", "高"]:
+                return urgency
+            else:
+                print(f"⚠️ 予期しない判定結果: {urgency}")
+        except Exception as e:
+            print(f"❌ Gemini API エラー: {e}")
 
-    except Exception as e:
-        print(f"❌ Gemini API エラー: {e}")
-        return "中"  # エラー時はデフォルトで中
+    # ✅ 2. OpenAI APIにフォールバック
+    if openai_client:
+        try:
+            print("🟢 OpenAI APIで判定中...")
+            response = openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": prompt_text.split("メッセージ:")[0]},
+                    {"role": "user", "content": f"以下のメッセージの緊急度を判定してください:\n\n{text}"}
+                ],
+                temperature=0.3,
+                max_tokens=10
+            )
+            urgency = response.choices[0].message.content.strip()
+            print(f"🤖 OpenAI判定結果: '{urgency}'")
+
+            # 正規化
+            if urgency in ["低", "中", "高"]:
+                return urgency
+            else:
+                print(f"⚠️ 予期しない判定結果: {urgency}")
+        except Exception as e:
+            print(f"❌ OpenAI API エラー: {e}")
+
+    # ✅ 3. 両方とも失敗した場合はデフォルト値
+    print("⚠️ すべてのAI APIが使用不可 - デフォルトで'中'を返します")
+    return "中"
 
 # =========================================================
 # 🔒 Slack署名検証関数
