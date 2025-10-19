@@ -73,13 +73,13 @@ Electron ベース
 
 **ブラウザ Web アプリとの比較**
 
-| 観点 | ブラウザ Web アプリ | Replay Mate |
-|------|------------------|--------------------------------|
-| 🗄️ **データ保存** | クラウドサーバーに依存 | ローカル環境で安全に管理 |
-| 🔑 **認証情報** | ブラウザのクッキー/セッション | OS 環境変数で厳重に管理 |
-| 📡 **ネットワーク通信** | 常時サーバーと通信 | 高緊急度メッセージのみ送信（通信最小化） |
-| 🌐 **動作環境** | インターネット接続必須 | オフラインでも基本機能が利用可能 |
-| 👁️ **常時表示** | タブ切り替えで見失う | Always on Top 機能で常に視界に |
+| 観点                    | ブラウザ Web アプリ           | Replay Mate                              |
+| ----------------------- | ----------------------------- | ---------------------------------------- |
+| 🗄️ **データ保存**       | クラウドサーバーに依存        | ローカル環境で安全に管理                 |
+| 🔑 **認証情報**         | ブラウザのクッキー/セッション | OS 環境変数で厳重に管理                  |
+| 📡 **ネットワーク通信** | 常時サーバーと通信            | 高緊急度メッセージのみ送信（通信最小化） |
+| 🌐 **動作環境**         | インターネット接続必須        | オフラインでも基本機能が利用可能         |
+| 👁️ **常時表示**         | タブ切り替えで見失う          | Always on Top 機能で常に視界に           |
 
 **セキュリティ面の強み:**
 
@@ -185,15 +185,9 @@ Firestore でデータ永続化
 #### AI & APIs
 
 [![Gemini](https://img.shields.io/badge/Gemini_API-2.5_Flash-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
-[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--3.5--Turbo-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4--o-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/)
 [![Slack](https://img.shields.io/badge/Slack_API-Events_&_Web-4A154B?style=for-the-badge&logo=slack&logoColor=white)](https://api.slack.com/)
 [![Firebase](https://img.shields.io/badge/Firebase-Firestore-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
-
-#### Platform
-
-[![macOS](https://img.shields.io/badge/macOS-Supported-000000?style=for-the-badge&logo=apple&logoColor=white)](https://www.apple.com/macos/)
-[![Windows](https://img.shields.io/badge/Windows-Supported-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
-[![Linux](https://img.shields.io/badge/Linux-Supported-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://www.kernel.org/)
 
 </div>
 
