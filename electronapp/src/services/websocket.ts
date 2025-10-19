@@ -5,6 +5,7 @@ class WebSocketService {
   private listeners: Map<string, Function[]> = new Map();
 
   connect(url: string = process.env.REACT_APP_WS_URL || 'ws://localhost:8000/ws') {
+    console.log('🔍 環境変数 REACT_APP_WS_URL:', process.env.REACT_APP_WS_URL);
     console.log('🔌 WebSocket接続先:', url);
     this.ws = new WebSocket(url);
 
