@@ -44,7 +44,16 @@ function App() {
   
   // パーティクル効果
   const [showParticles, setShowParticles] = useState(false);
-
+  
+  // フグの震えエフェクト
+  const [fishShake, setFishShake] = useState(false);
+  
+  // Slackフグの位置追跡
+  const [slackFishPosition, setSlackFishPosition] = useState({ x: 0, y: 0 });
+  
+  // Slackフグのサイズ管理
+  const [slackFishScale, setSlackFishScale] = useState(1);
+ 
   const inputRef = useRef<HTMLInputElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -71,28 +80,46 @@ function App() {
       console.error('❌ WebSocketエラー:', error);
     };
     
-          // 新しいメッセージを受信
-          const handleNewMessage = (data: Message) => {
-            console.log('📨 新メッセージ受信:', data);
-            
-            // 吹き出し表示
-            setNewMessage(data);
-            setShowBubble(true);
-            
-            // 3秒後に吹き出しを非表示
-            setTimeout(() => {
-              setShowBubble(false);
-              setNewMessage(null);
-            }, 3000);
-            
-            // デスクトップ通知
-            if (Notification.permission === 'granted') {
-              new Notification('新しいメッセージ', {
-                body: data.text,
-                icon: '/icon.png'
-              });
-            }
-          };
+    // 新しいメッセージを受信（Slackのみ）
+    const handleNewMessage = (data: Message) => {
+      console.log('📨 新メッセージ受信:', data);
+      
+      // Slackのメッセージのみ処理
+      if (data.channel && data.user) {
+        // Slackのメッセージリストに追加
+        setAppMessages(prev => ({
+          ...prev,
+          slack: [data, ...(prev.slack || [])]
+        }));
+        
+        // フグを震わせる
+        setFishShake(true);
+        setTimeout(() => setFishShake(false), 500);
+        
+        // Slackフグを大きくする（初期画面のみ、元に戻さない）
+        if (!currentApp) {
+          setSlackFishScale(prev => Math.min(prev + 1.3, 3.0)); // 1.3倍ずつ大きく、最大3倍まで
+        }
+        
+        // 吹き出し表示
+        setNewMessage(data);
+        setShowBubble(true);
+        
+        // 3秒後に吹き出しを非表示
+        setTimeout(() => {
+          setShowBubble(false);
+          setNewMessage(null);
+        }, 3000);
+        
+        // デスクトップ通知
+        if (Notification.permission === 'granted') {
+          new Notification('新しいSlackメッセージ', {
+            body: data.text,
+            icon: '/icon.png'
+          });
+        }
+      }
+    };
 
     // 未読メッセージ更新を受信
     const handleUnreadUpdate = (data: any) => {
@@ -124,7 +151,7 @@ function App() {
       wsService.off('unread_update', handleUnreadUpdate);
       wsService.disconnect();
     };
-  }, []);
+  }, [currentApp]); // currentAppを依存配列に追加
 
   // 泳ぎ方向の監視
   useEffect(() => {
@@ -147,22 +174,44 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Slackフグの位置追跡
+  useEffect(() => {
+    const updateSlackFishPosition = () => {
+      const slackFishElement = document.querySelector('.app-fish:first-child');
+      if (slackFishElement) {
+        const rect = slackFishElement.getBoundingClientRect();
+        setSlackFishPosition({
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2
+        });
+      }
+    };
+
+    // 初期位置設定
+    updateSlackFishPosition();
+
+    // 定期的に位置更新
+    const interval = setInterval(updateSlackFishPosition, 100);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   // 泳ぎ方向の状態
   const [swimDirection, setSwimDirection] = useState<'left' | 'right' | 'center'>('center');
 
   // 画像切り替えロジック
-  const getCurrentImage = () => {
-    // アプリケーション別画面でのみメッセージ数による切り替え
-    if (currentApp && appMessages[currentApp]) {
-      const appMsgCount = appMessages[currentApp].length;
-      if (appMsgCount >= 5) {
+  const getCurrentImage = (appId?: string) => {
+    // Slackフグのみメッセージ数による表情変化を適用
+    if (appId === 'slack') {
+      const slackMsgCount = appMessages.slack?.length || 0;
+      if (slackMsgCount >= 5) {
         return deadImage; // 5件以上でdead.png
-      } else if (appMsgCount >= 3) {
+      } else if (slackMsgCount >= 3) {
         return angryImage; // 3件以上でangry.png
       }
     }
     
-    // 泳ぎ方向による切り替え
+    // 泳ぎ方向による切り替え（全フグ共通）
     if (swimDirection === 'right') {
       return defaultImage; // 右に動く時はkawaii.png
     } else if (swimDirection === 'left') {
@@ -211,6 +260,12 @@ function App() {
   ];
 
   const handleAppClick = async (appId: string) => {
+    // Slackのみ詳細画面に遷移
+    if (appId !== 'slack') {
+      console.log(`🚫 ${appId}は詳細画面に遷移しません（Slackのみ対応）`);
+      return;
+    }
+    
     // パーティクル効果を発動
     setShowParticles(true);
     setTimeout(() => setShowParticles(false), 600);
@@ -219,7 +274,12 @@ function App() {
     setIsClicked(true);
     setTimeout(() => setIsClicked(false), 500);
     
-    // 詳細画面でDBから未読一覧を取得
+    // Slackフグのサイズをリセット（詳細画面に遷移時）
+    if (appId === 'slack') {
+      setSlackFishScale(1);
+    }
+    
+    // Slackの詳細画面でDBから未読一覧を取得
     try {
       console.log(`🔍 ${appId}の未読メッセージを取得中...`);
       const unreadMessages = await api.getUnreadMessages(appId);
@@ -304,14 +364,14 @@ function App() {
   return (
     <div className="App">
       {/* ウィンドウ操作ボタン */}
-      <div className="window-controls">
-        <button 
-          className="control-btn minimize-btn" 
-          onClick={() => window.electronAPI?.minimize()}
-          title="最小化"
-        >
-          −
-        </button>
+             <div className="window-controls">
+               <button 
+                 className="control-btn minimize-btn" 
+                 onClick={() => window.electronAPI?.minimize()}
+                 title="最小化"
+               >
+                 −
+               </button>
         <button 
           className="control-btn maximize-btn" 
           onClick={() => window.electronAPI?.maximize()}
@@ -343,14 +403,14 @@ function App() {
                  🧪
                </button>
         {/* HTTP送信テストボタン */}
-        <button 
-          className="control-btn" 
-          onClick={testHttpSend}
-          title="HTTP送信テスト"
-          style={{ backgroundColor: '#fd7e14', color: 'white' }}
-        >
-          📤
-        </button>
+               <button 
+                 className="control-btn" 
+                 onClick={testHttpSend}
+                 title="HTTP送信テスト"
+                 style={{ backgroundColor: '#fd7e14', color: 'white' }}
+               >
+                 📤
+               </button>
         {/* 泳ぎ方向表示 */}
         <div 
           className="control-btn" 
@@ -383,10 +443,14 @@ function App() {
             >
               <div className="fish-container">
                 <img
-                  src={getCurrentImage()}
-                  className={`App-image ${isClicked ? 'clicked' : ''}`}
+                  src={getCurrentImage(app.id)}
+                  className={`App-image ${isClicked ? 'clicked' : ''} ${fishShake ? 'shake' : ''}`}
                   alt={`${app.name} Fish`}
                   draggable="false"
+                  style={{
+                    transform: app.id === 'slack' ? `scale(${slackFishScale})` : 'scale(1)',
+                    transition: 'transform 0.3s ease-in-out'
+                  }}
                 />
                 <div className="app-icon">{app.icon}</div>
                 <div className="app-name">{app.name}</div>
@@ -414,8 +478,8 @@ function App() {
             onMouseLeave={handleDragEnd}
           >
             <img
-              src={getCurrentImage()}
-              className={`App-image ${isClicked ? 'clicked' : ''}`}
+              src={getCurrentImage(currentApp)}
+              className={`App-image ${isClicked ? 'clicked' : ''} ${fishShake ? 'shake' : ''}`}
               alt="Character"
               draggable="false"
             />
@@ -458,12 +522,22 @@ function App() {
         </div>
       )}
 
-      {/* 新規メッセージの吹き出し表示 */}
+      {/* Slackフグ専用のメッセージ表示 */}
       {showBubble && newMessage && (
-        <div className="message-bubble">
-          <div className="bubble-content">
-            <div className="bubble-text">{newMessage.text}</div>
-            <div className="bubble-user">@{newMessage.user}</div>
+        <div 
+          className="slack-message-follow"
+          style={{
+            position: 'fixed',
+            left: `${slackFishPosition.x}px`,
+            top: `${slackFishPosition.y + 80}px`,
+            transform: 'translate(-50%, -50%)',
+            zIndex: 2000
+          }}
+        >
+          <div className="slack-bubble">
+            <div className="slack-badge">💬 Slack</div>
+            <div className="slack-message-text">{newMessage.text}</div>
+            <div className="slack-message-user">@{newMessage.user}</div>
           </div>
         </div>
       )}

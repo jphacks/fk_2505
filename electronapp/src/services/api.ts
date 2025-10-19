@@ -35,26 +35,16 @@ export const api = {
     // モック：実際のHTTP送信をシミュレート
     await new Promise(resolve => setTimeout(resolve, 500)); // 0.5秒待機
     
-    // アプリケーション別のダミーメッセージ
+    // Slackのみ実際のデータ、他は完全ダミー
     const appMessages: Record<string, any[]> = {
       slack: [
         { id: 'slack_1', channel: 'C1234567890', user: 'U1234567890', text: 'Slack未読メッセージ 1', timestamp: Date.now().toString() },
         { id: 'slack_2', channel: 'C1234567890', user: 'U1234567890', text: 'Slack未読メッセージ 2', timestamp: Date.now().toString() },
         { id: 'slack_3', channel: 'C1234567890', user: 'U1234567890', text: 'Slack未読メッセージ 3', timestamp: Date.now().toString() }
       ],
-      line: [
-        { id: 'line_1', channel: 'C1234567890', user: 'U1234567890', text: 'LINE未読メッセージ 1', timestamp: Date.now().toString() },
-        { id: 'line_2', channel: 'C1234567890', user: 'U1234567890', text: 'LINE未読メッセージ 2', timestamp: Date.now().toString() }
-      ],
-      discord: [
-        { id: 'discord_1', channel: 'C1234567890', user: 'U1234567890', text: 'Discord未読メッセージ 1', timestamp: Date.now().toString() }
-      ],
-      teams: [
-        { id: 'teams_1', channel: 'C1234567890', user: 'U1234567890', text: 'Teams未読メッセージ 1', timestamp: Date.now().toString() },
-        { id: 'teams_2', channel: 'C1234567890', user: 'U1234567890', text: 'Teams未読メッセージ 2', timestamp: Date.now().toString() },
-        { id: 'teams_3', channel: 'C1234567890', user: 'U1234567890', text: 'Teams未読メッセージ 3', timestamp: Date.now().toString() },
-        { id: 'teams_4', channel: 'C1234567890', user: 'U1234567890', text: 'Teams未読メッセージ 4', timestamp: Date.now().toString() }
-      ]
+      line: [], // 完全ダミー
+      discord: [], // 完全ダミー
+      teams: [] // 完全ダミー
     };
     
     const messages = appId ? appMessages[appId] || [] : appMessages.slack;

@@ -4,7 +4,7 @@ class WebSocketService {
   private reconnectTimer: NodeJS.Timeout | null = null;
   private listeners: Map<string, Function[]> = new Map();
 
-  connect(url: string = process.env.REACT_APP_WS_URL || 'ws://localhost:8000/ws') {
+  connect(url: string = process.env.REACT_APP_WS_URL || 'ws://localhost:8000') {
     console.log('🔍 環境変数 REACT_APP_WS_URL:', process.env.REACT_APP_WS_URL);
     console.log('🔌 WebSocket接続先:', url);
     this.ws = new WebSocket(url);
@@ -88,6 +88,14 @@ class WebSocketService {
     const callbacks = this.listeners.get(event);
     if (callbacks) {
       callbacks.forEach(callback => callback(data));
+    }
+  }
+
+  send(message: any) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(message));
+    } else {
+      console.warn('WebSocket is not open. Message not sent:', message);
     }
   }
 
