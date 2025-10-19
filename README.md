@@ -47,9 +47,7 @@
 緊急度が**高**と判定されたメッセージのみがリアルタイム通知として表示されるため、重要な連絡に集中できます。
 
 <div align="center">
-
-![アニメーション実装の詳細](./electronapp/public/images/ai_judge.png)
-
+    <img src="./electronapp/public/images/ai_judge.png" alt="AI判定" style="height: 50%; width: auto;">
 </div>
 
 ### 2. 可愛らしいフグキャラクターによる視覚的フィードバック
@@ -187,9 +185,7 @@ Reply Mate は Web アプリではなく、**デスクトップアプリ**とし
 ### システム構成図
 
 <div align="center">
-
-![アニメーション実装の詳細](./electronapp/public/images/system.png)
-
+    <img src="./electronapp/public/images/system.png" style="height: 80%; width: auto;">
 </div>
 
 ### ハッカソンで開発した独自機能・技術
