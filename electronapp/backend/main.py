@@ -10,6 +10,7 @@ import google.generativeai as genai
 import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from firebasemanager import firebase_manager
 from pydantic import BaseModel
 from slack_sdk import WebClient
@@ -57,6 +58,19 @@ slack_client = WebClient(token=os.environ["SLACK_BOT_TOKEN"])
 SLACK_CLIENT_ID = os.getenv("SLACK_CLIENT_ID")
 SLACK_CLIENT_SECRET = os.getenv("SLACK_CLIENT_SECRET")
 SLACK_REDIRECT_URI = os.getenv("SLACK_REDIRECT_URI")
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",  # ← React開発環境
+        "http://127.0.0.1:3000",  # ← 一部環境ではこれも必要
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],  # 全HTTPメソッド許可
+    allow_headers=["*"],  # 全ヘッダー許可
+)
+
 
 
 
@@ -255,6 +269,8 @@ async def slack_event(request: Request):
 
     # 各ユーザーに対してメッセージ保存
     for receiver_id in channel_members:
+        # 👇 自分宛てなら既読扱いにする
+        is_see = receiver_id == sender_id
         firebase_manager.receive_message(
             receiver_id=receiver_id,  # 🔥 アプリ利用者（Botではない）
             sender_id=sender_id,      # 発言者
@@ -263,7 +279,7 @@ async def slack_event(request: Request):
             text=text,
             is_ai=False,
             is_bot=False,
-            is_see=False,
+            is_see=is_see,
             channel_type=event.get("channel_type", "im")
         )
     
@@ -356,6 +372,7 @@ async def handle_message(event: dict):
 # =========================================================
 @app.post("/slack/reply")
 async def slack_reply(req: SlackReplyRequest):
+    print("📥 受信データ:", req.dict())  # ← ここ追加
     """
     Firestoreに保存されたSlackユーザートークンで本人として返信
     """
@@ -390,6 +407,23 @@ async def slack_reply(req: SlackReplyRequest):
 
     except Exception as e:
         print("❌ Slack返信APIエラー:", e)
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/messages/unread/{user_id}")
+def get_unread_messages(user_id: str):
+    try:
+        messages_ref = firebase_manager.db.collection("users").document(user_id).collection("messages")
+        unread_query = messages_ref.where("is_see", "==", False).stream()
+
+        unread_messages = []
+        for doc in unread_query:
+            data = doc.to_dict()
+            data["id"] = doc.id
+            unread_messages.append(data)
+
+        return {"count": len(unread_messages), "messages": unread_messages}
+
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
