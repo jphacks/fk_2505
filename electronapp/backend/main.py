@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import List, Optional
 
 import firebase_admin
+import google.generativeai as genai
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from firebasemanager import firebase_manager
@@ -20,6 +21,13 @@ active_connections: List[WebSocket] = []
 # ===== Slack環境変数 =====
 SLACK_SIGNING_SECRET = os.getenv("SLACK_SIGNING_SECRET")
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
+# ===== Gemini環境変数 =====
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+    gemini_model = genai.GenerativeModel('gemini-2.5-flash')
+else:
+    gemini_model = None
 
 slack_client = WebClient(token=os.environ["SLACK_BOT_TOKEN"])
 
@@ -55,6 +63,59 @@ async def register_user(user: UserRegisterRequest):
         print("❌ Firestore登録エラー:", e)
         raise HTTPException(status_code=500, detail="Failed to register user.")
 
+
+# =========================================================
+# 🤖 Gemini緊急度判定関数
+# =========================================================
+async def analyze_urgency(text: str) -> str:
+    """
+    Google Gemini APIを使用してメッセージの緊急度を判定
+    Returns: "低" | "中" | "高"
+    """
+    if not gemini_model:
+        print("⚠️ Gemini API未設定 - デフォルトで'中'を返します")
+        return "中"
+
+    try:
+        prompt = f"""あなたはSlackメッセージの緊急度を判定するAIです。
+以下の基準で判定してください:
+
+【高】即座の対応が必要
+- システム障害、エラー、緊急のバグ報告
+- 締切が迫っている重要なタスク
+- 顧客からのクレームや緊急の問い合わせ
+- セキュリティ関連の警告
+- 「至急」「緊急」「すぐに」などの緊急を示す言葉
+
+【中】通常の業務連絡
+- 一般的な質問や相談
+- 通常のタスク依頼
+- 情報共有
+
+【低】確認不要または雑談
+- 雑談、挨拶
+- 既読確認のみで対応不要なもの
+- スタンプのみのリアクション
+
+回答は必ず「低」「中」「高」のいずれか1文字のみで返してください。
+
+メッセージ:
+{text}"""
+
+        response = gemini_model.generate_content(prompt)
+        urgency = response.text.strip()
+        print(f"🤖 AI判定結果: '{urgency}'")
+
+        # 正規化
+        if urgency in ["低", "中", "高"]:
+            return urgency
+        else:
+            print(f"⚠️ 予期しない判定結果: {urgency} - デフォルトで'中'を返します")
+            return "中"
+
+    except Exception as e:
+        print(f"❌ Gemini API エラー: {e}")
+        return "中"  # エラー時はデフォルトで中
 
 # =========================================================
 # 🔒 Slack署名検証関数
@@ -151,19 +212,32 @@ async def websocket_endpoint(websocket: WebSocket):
 # 📤 Slackメッセージをブロードキャスト
 # =========================================================
 async def handle_message(event: dict):
-    """Slackメッセージを全WebSocketクライアントにブロードキャスト"""
+    """Slackメッセージの緊急度を判定し、高緊急度のみWebSocketクライアントにブロードキャスト"""
+    message_text = event.get("text", "")
+
+    # ✅ OpenAI APIで緊急度を判定
+    print(f"🤖 緊急度判定開始: {message_text}")
+    urgency = await analyze_urgency(message_text)
+    print(f"📊 緊急度: {urgency}")
+
+    # ✅ 緊急度が「高」の場合のみクライアントに送信
+    if urgency != "高":
+        print(f"⏭️  緊急度が'{urgency}'のためスキップ (高のみ送信)")
+        return
+
     message_data = {
         "type": "new_message",
         "data": {
             "id": event.get("client_msg_id", event.get("ts", "")),
             "channel": event.get("channel", ""),
             "user": event.get("user", ""),
-            "text": event.get("text", ""),
-            "timestamp": event.get("ts", "")
+            "text": message_text,
+            "timestamp": event.get("ts", ""),
+            "urgency": urgency  # 緊急度を追加
         }
     }
 
-    print(f"📤 ブロードキャスト: {len(active_connections)}クライアントに送信")
+    print(f"📤 ブロードキャスト: {len(active_connections)}クライアントに送信 (緊急度: {urgency})")
     print(f"📤 送信データ: {json.dumps(message_data, ensure_ascii=False)}")
 
     # 切断されたクライアントを追跡
