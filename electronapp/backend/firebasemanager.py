@@ -1,7 +1,11 @@
 # managers/firebase_manager.py
 from datetime import datetime
+
+import firebase_setting
 import pytz
+from firebase_admin import firestore, initialize_app
 from google.cloud.firestore_v1.client import Client
+
 
 class FirebaseManager:
     def __init__(self, db: Client):
@@ -103,3 +107,9 @@ class FirebaseManager:
 
         ref.set(data)
         return data
+
+
+# --- グローバルインスタンスを生成 ---
+initialize_app(firebase_setting.cred)
+db = firestore.client()
+firebase_manager = FirebaseManager(db)

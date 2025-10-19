@@ -1,6 +1,9 @@
 # Standard Library
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
 # Third Party Library
 from firebase_admin import credentials
 
